@@ -1,0 +1,142 @@
+{
+  "name": "high_replication_delay_in_postgresql_service",
+  "description": "This incident type refers to a high replication delay in a PostgreSQL service. Replication delay is the time it takes for a change made in the primary database to be replicated to the standby database. When the delay is abnormally high, it can indicate a problem with the replication process or the database itself. This can lead to data inconsistencies and other issues that can impact the performance and availability of the service. The incident usually requires investigation and troubleshooting to identify the root cause of the delay and to implement a solution to resolve the issue.",
+  "params": [
+    {
+      "name": "USERNAME",
+      "value": ""
+    },
+    {
+      "name": "STANDBY_SERVER",
+      "value": ""
+    },
+    {
+      "name": "HOST",
+      "value": ""
+    },
+    {
+      "name": "DATABASE",
+      "value": ""
+    },
+    {
+      "name": "HOST_NAME",
+      "value": ""
+    }
+  ],
+  "cells": [
+    {
+      "name": "cell_1",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## High replication delay in PostgreSQL service\nThis incident type refers to a high replication delay in a PostgreSQL service. Replication delay is the time it takes for a change made in the primary database to be replicated to the standby database. When the delay is abnormally high, it can indicate a problem with the replication process or the database itself. This can lead to data inconsistencies and other issues that can impact the performance and availability of the service. The incident usually requires investigation and troubleshooting to identify the root cause of the delay and to implement a solution to resolve the issue."
+    },
+    {
+      "name": "cell_2",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Connect to the database server and run psql command"
+    },
+    {
+      "name": "cell_3",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "rq_non_kubectl_oneliner | `psql -h ${HOST} -U ${USERNAME} -d ${DATABASE}`"
+    },
+    {
+      "name": "cell_4",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Check the replication status on the master"
+    },
+    {
+      "name": "cell_5",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "rq_non_kubectl_oneliner | `SELECT * FROM pg_stat_replication;`"
+    },
+    {
+      "name": "cell_6",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Check the replication status on the standby"
+    },
+    {
+      "name": "cell_7",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "rq_non_kubectl_oneliner | `SELECT * FROM pg_stat_wal_receiver;`"
+    },
+    {
+      "name": "cell_8",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Check the replication lag time on the standby"
+    },
+    {
+      "name": "cell_9",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "rq_non_kubectl_oneliner | `SELECT now() - pg_last_xact_replay_timestamp() AS replication_lag_time;`"
+    },
+    {
+      "name": "cell_10",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Check the PostgreSQL logs for any errors related to replication"
+    },
+    {
+      "name": "cell_11",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "rq_non_kubectl_oneliner | `cat /var/lib/pgsql/logs/*.log | grep \"replication\"`"
+    },
+    {
+      "name": "cell_12",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Check the PostgreSQL configuration file for any replication-related settings"
+    },
+    {
+      "name": "cell_13",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "rq_non_kubectl_oneliner | `cat /var/lib/pgsql/conf/postgresql.conf | grep \"replication\"`"
+    },
+    {
+      "name": "cell_14",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Restart the PostgreSQL service"
+    },
+    {
+      "name": "cell_15",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "rq_non_kubectl_oneliner | `sudo systemctl restart postgresql.service`"
+    },
+    {
+      "name": "cell_16",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Restart the replication process by resetting the standby server to the latest checkpoint on the primary server. This can be done by stopping the standby server, removing all files in the PostgreSQL data directory, and starting the server again."
+    },
+    {
+      "name": "cell_17",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "host | host_name=$HOST_NAME | invoke_stop_remove_start_standby_server($STANDBY_SERVER)"
+    },
+    {
+      "name": "cell_18",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Verify that the standby server is up to date with the primary server by checking the WAL files on the standby server. If there are any discrepancies, restore the missing files from the primary server."
+    },
+    {
+      "name": "cell_19",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "host | host_name=$HOST_NAME | invoke_wal_sync()"
+    }
+  ]
+}
